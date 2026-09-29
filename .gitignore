@@ -12,3 +12,7 @@ venv/
 .DS_Store
 Thumbs.db
 .vscode/
+
+# Large data files (documented in README, not committed)
+data/raw/*.csv
+data/processed/*.csv
