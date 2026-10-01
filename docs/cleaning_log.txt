@@ -1,0 +1,15 @@
+Loaded raw: 180,519 rows, 53 columns
+Dropped 10 columns (D4)
+
+VALIDATION
+PASS | No rows lost
+PASS | order_item_id is unique
+PASS | No nulls in key columns
+PASS | Shipping date never before order date
+PASS | is_late matches late_delivery_risk
+PASS | is_late + is_on_time == is_eligible on every row
+PASS | Eligible lines == 172,765
+
+Final: 180,519 rows, 47 columns
+Distinct orders: 65,752
+Eligible lines: 172,765 | Late: 98,977
