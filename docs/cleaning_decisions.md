@@ -30,7 +30,21 @@ Evidence: equals the shipping-date minus order-date gap on 175,862 rows. The oth
 - Supplier KPIs: there is no supplier column.
 - True delivery cycle time: there is no delivery date.
 
+## Decisions from SQL analysis (sql/04_analysis.sql)
+
+**D5. Order Value = `order_item_total`** (sales minus discount).
+Evidence: it equals sales minus discount on 179,295 of 180,519 lines. The other 1,224 differ by exactly 0.01 (rounding). Total value: 33,054,402.38. `sales` (36,784,735.01) is the price before discount and is not used as Order Value.
+
+**D6. KPIs are calculated at order level (`order_id`).**
+Evidence: no order has lines with different delivery status or shipping date (0 of 65,752).
+Result: 65,752 orders; 62,897 eligible; 36,048 late; delay rate 57.31%. The line-level late rate is 57.29% (98,977 of 172,765 lines). Order-level total value matches line-level (33,054,402.38).
+
+## Findings to verify before publishing
+- First Class: all 26,513 eligible lines are late. Scheduled 1 day, real always 2 days.
+- Same Day: all 4,454 late lines have scheduled 0 and real 1. This count equals the half-day (12-hour) cases found earlier; a row-level match has not been tested.
+- Standard and Second Class: late exactly when real days exceed scheduled days.
+- Real shipping days are spread almost evenly across 2-6 days for Standard and Second Class, which is unusual for real operations. The data may be simulated; treat shipping-mode findings with care.
+
 ## Open items
-- Which column defines Order Value: `Sales` or `Order Item Total`? To decide in the KPI phase.
 - `Benefit per order` goes as low as -4,274.98. Check whether these are real losses.
-- Why the half-day rounding cases fall only in late and canceled lines is unknown.
+- 203 canceled lines also have the half-day gap; the reason is unknown.
