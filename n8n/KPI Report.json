@@ -1,0 +1,121 @@
+{
+  "name": "KPI Report",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        0
+      ],
+      "id": "4596c4b7-1ac5-492d-8535-8124f42e4bb6",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "   SELECT * FROM analytics.exceptions_shipping_mode ORDER BY delay_rate_pct DESC;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        448,
+        0
+      ],
+      "id": "612e4e2f-1fa2-43da-ae79-c8c7d6f87db9",
+      "name": "Get Exceptions",
+      "credentials": {
+        "postgres": {
+          "id": "uVFzZp1hrI2Ef3ZO",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "   SELECT * FROM analytics.kpi_summary;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.7,
+      "position": [
+        224,
+        0
+      ],
+      "id": "4149982b-bef1-4206-b2ec-0281b612afc4",
+      "name": "Get KPIs",
+      "credentials": {
+        "postgres": {
+          "id": "uVFzZp1hrI2Ef3ZO",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Build Report: validate the inputs, then build the report from calculated values only.\nconst kpi = $('Get KPIs').first().json;\nconst exceptions = $('Get Exceptions').all().map(item => item.json);\n\n// 1. Required KPI fields must exist and be numbers (Postgres sends them as text)\nconst kpiFields = [\n  'total_orders', 'total_order_value', 'excluded_canceled_orders',\n  'eligible_orders', 'on_time_orders', 'late_orders',\n  'on_time_pct', 'delay_rate_pct', 'avg_order_to_ship_days',\n];\nconst badKpi = kpiFields.filter(f =>\n  kpi[f] === undefined || kpi[f] === null || kpi[f] === '' || Number.isNaN(Number(kpi[f]))\n);\nif (badKpi.length > 0) {\n  throw new Error('KPI validation failed. Missing or non-numeric fields: ' + badKpi.join(', '));\n}\nconst k = {};\nkpiFields.forEach(f => { k[f] = Number(kpi[f]); });\n\n// 2. The numbers must agree with each other\nconst problems = [];\nif (k.eligible_orders + k.excluded_canceled_orders !== k.total_orders) {\n  problems.push('eligible + excluded does not equal total orders');\n}\nif (k.on_time_orders + k.late_orders !== k.eligible_orders) {\n  problems.push('on-time + late does not equal eligible orders');\n}\nif (k.eligible_orders <= 0) {\n  problems.push('eligible orders must be above zero');\n} else {\n  const delayCheck = Math.round(10000 * k.late_orders / k.eligible_orders) / 100;\n  if (Math.abs(delayCheck - k.delay_rate_pct) > 0.01) {\n    problems.push('delay rate does not match late / eligible');\n  }\n}\n\n// 3. Every exception row needs its fields\nconst exFields = ['shipping_mode', 'eligible_orders', 'late_orders', 'delay_rate_pct', 'points_above_overall'];\nexceptions.forEach((row, i) => {\n  const missing = exFields.filter(f => row[f] === undefined || row[f] === null || row[f] === '');\n  if (missing.length > 0) {\n    problems.push('exception row ' + (i + 1) + ' is missing: ' + missing.join(', '));\n  }\n});\nif (problems.length > 0) {\n  throw new Error('Validation failed: ' + problems.join('; '));\n}\n\n// 4. Build the report text\nconst n0 = v => Number(v).toLocaleString('en-US');\nconst n2 = v => Number(v).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });\n\nconst lines = [\n  'KPI REPORT',\n  'Generated (UTC): ' + new Date().toISOString(),\n  'Sources: analytics.kpi_summary, analytics.exceptions_shipping_mode',\n  '',\n  'SUMMARY',\n  'Total orders: ' + n0(k.total_orders),\n  'Total order value: ' + n2(k.total_order_value),\n  'Eligible orders: ' + n0(k.eligible_orders) + ' (excludes ' + n0(k.excluded_canceled_orders) + ' canceled orders)',\n  'On-time: ' + n0(k.on_time_orders) + ' (' + n2(k.on_time_pct) + '%)',\n  'Late: ' + n0(k.late_orders) + ' (' + n2(k.delay_rate_pct) + '%)',\n  'Average order-to-ship days: ' + n2(k.avg_order_to_ship_days),\n  '',\n  'EXCEPTIONS (delay rate above overall ' + n2(k.delay_rate_pct) + '%, at least 500 eligible orders)',\n];\nif (exceptions.length === 0) {\n  lines.push('No exceptions found.');\n} else {\n  exceptions.forEach(e => {\n    lines.push('- ' + e.shipping_mode + ': ' + n0(e.late_orders) + ' late of ' + n0(e.eligible_orders) +\n      ' eligible (' + n2(e.delay_rate_pct) + '%, +' + n2(e.points_above_overall) + ' points)');\n  });\n}\n\nreturn [{ json: { validation: 'passed', kpis: k, exceptions, report_text: lines.join('\\n') } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        0
+      ],
+      "id": "fa9a858f-5c60-4378-b4dc-b09a661d808e",
+      "name": "Build Report"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get KPIs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get KPIs": {
+      "main": [
+        [
+          {
+            "node": "Get Exceptions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Exceptions": {
+      "main": [
+        [
+          {
+            "node": "Build Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": false
+  },
+  "versionId": "e4701c4e-5903-409d-9bf2-df48eb2dfc79",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d77dffc14adf81d4610d1085b44423ece9db8d005aa219768927c7bdeccb21da"
+  },
+  "nodeGroups": [],
+  "id": "BesIOD2HtSu1WSBQ",
+  "tags": []
+}
