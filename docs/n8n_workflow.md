@@ -1,22 +1,30 @@
 # n8n Workflow: KPI Report
 
-Export: `n8n/KPI Report.json`. n8n 2.35.7, run locally.
+Export: `n8n/KPI Report.json` (n8n 2.35.7, run locally). Personal fields were removed from the export with `python/sanitize_n8n_export.py`.
 
 ## Purpose
-Read the KPI results and the exception list from PostgreSQL, validate them, and build a report that uses only values calculated in SQL.
+Read the KPI results and the exception list from PostgreSQL, validate them, build a report that uses only values calculated in SQL, and log every run.
 
 ## Flow
-Manual Trigger -> Get KPIs -> Get Exceptions -> Build Report
+Manual Trigger -> Get KPIs -> Get Exceptions -> Build Report, then:
+- Build Report success output -> Log Run
+- Build Report error output -> Prepare Failure Log -> Log Failure
 
 | Node | Type | What it does |
 |---|---|---|
-| When clicking 'Execute workflow' | Manual trigger | Starts a run (scheduling is not set up yet) |
+| When clicking 'Execute workflow' | Manual trigger | Starts a run (no schedule yet) |
 | Get KPIs | PostgreSQL, Execute Query | `SELECT * FROM analytics.kpi_summary;` |
 | Get Exceptions | PostgreSQL, Execute Query | `SELECT * FROM analytics.exceptions_shipping_mode ORDER BY delay_rate_pct DESC;` |
-| Build Report | Code (JavaScript) | Validates both inputs, then writes the report text |
+| Build Report | Code (JavaScript) | Validates both inputs, builds the report text and an INSERT statement. Error output enabled. |
+| Log Run | PostgreSQL, Execute Query | Saves the successful run into `analytics.report_log` |
+| Prepare Failure Log | Code (JavaScript) | Turns the error message into an INSERT statement |
+| Log Failure | PostgreSQL, Execute Query | Saves the failed run into `analytics.report_log` |
 
 ## Exception rule (sql/06_exceptions.sql)
 A shipping mode is an exception when its delay rate is above the overall delay rate and it has at least 500 eligible orders. These thresholds are a documented decision and can be changed.
+
+## Run log (sql/07_run_log.sql)
+Table `analytics.report_log`: run id, time, status (`success` or `failed`), key KPI values, exception count, and the report text, or the error message for failed runs.
 
 ## Validation in Build Report
 The run stops with an error if any of these fail:
@@ -30,26 +38,34 @@ The run stops with an error if any of these fail:
 ## Acceptance tests
 | Test | Result |
 |---|---|
-| Normal run succeeds | Passed. All four nodes ran; Build Report returned `validation: passed`. |
+| Normal run succeeds | Passed. All nodes ran and Build Report returned `validation: passed`. |
 | KPI values match SQL | Passed. 65,752 orders, 62,897 eligible, 2,855 excluded, 26,849 on time (42.69%), 36,048 late (57.31%), 3.50 average order-to-ship days. |
 | Output has KPI summary and exceptions | Passed. First Class: 9,602 late of 9,602 eligible (100.00%). Second Class: 9,803 late of 12,256 eligible (79.99%). |
+| Successful run is logged | Passed. Rows with status `success` and the same totals were found in `analytics.report_log` with a database query. |
 | Broken input is rejected visibly | Passed. The KPI query was temporarily changed to return eligible orders + 100. Build Report failed with: "eligible + excluded does not equal total orders; on-time + late does not equal eligible orders; delay rate does not match late / eligible". No report was produced. The real query was restored afterwards. |
+| Failed run is logged | Passed. The same test left a row with status `failed`, empty totals, and the error message as its text. |
 | AI uses only supplied metrics | Not applicable yet (Phase 9). |
-| Failure path documented | This section. |
 
 ## Failure path
-- **Validation fails:** Build Report throws an error and turns red. n8n marks the run as failed and lists the problems. No report is produced. Fix the data or the SQL view, then run again.
-- **Database unreachable or a query fails:** the Get KPIs or Get Exceptions node errors and the run stops before Build Report. **Not tested.**
-- **Error alert (email or Slack):** not set up.
-- **Run logging:** n8n's Executions tab shows past runs. A separate success or failure log is not set up yet.
+- **Validation fails:** Build Report sends the error down its error output. Prepare Failure Log and Log Failure save it as a `failed` row, and no report is produced. Fix the data or the SQL view, then run again.
+- **Database unreachable or a query fails in Get KPIs or Get Exceptions:** the run stops before Build Report. **Not tested.**
+- **Log Run or Log Failure fails to write:** **Not tested.**
+- **Email or Slack alert:** not set up. Failures are visible in n8n and in `analytics.report_log`.
 
 ## Setup
-1. Run the SQL scripts in `sql/` in order (01 to 06).
+1. Run the SQL scripts in `sql/` in order (01 to 07).
 2. In n8n, create a Postgres credential named `Postgres account`: host `localhost`, database `supply_chain`, user `postgres`, port 5432, SSL disabled. Enter the password in n8n only. The export does not contain it.
 3. Import `n8n/KPI Report.json` into n8n and run it.
 4. Run n8n in its own Command Prompt window and leave it open.
 
+## Updating the export
+1. Save the workflow in n8n.
+2. Run `n8n export:workflow --id=<workflow id> --output="n8n\KPI Report.json"`.
+3. Run `python python\sanitize_n8n_export.py` to remove personal fields and format the file.
+4. Check the file for secrets before committing.
+
 ## Known limits
 - Manual trigger only, no schedule.
-- The report is shown in n8n but not yet saved or sent anywhere.
+- The report is stored in the database but not sent to anyone.
+- The log contains the test runs from development.
 - Report times are in UTC.
