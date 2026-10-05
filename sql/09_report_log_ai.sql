@@ -1,0 +1,4 @@
+ALTER TABLE analytics.report_log
+ADD COLUMN IF NOT EXISTS ai_status TEXT,
+ADD COLUMN IF NOT EXISTS ai_summary TEXT,
+ADD COLUMN IF NOT EXISTS ai_check_detail TEXT;
