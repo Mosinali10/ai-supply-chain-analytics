@@ -94,3 +94,7 @@ No AI-generated text is considered trusted until the checker returns:
 ```text
 ok: true
 ```
+
+
+## Model settings
+Not set. No model was called (mock mode). Settings, such as lowest temperature, will be added when a real model is connected.
