@@ -53,7 +53,7 @@ Details, tests and limits: `docs/ai_layer.md`. Prompt: `docs/ai_prompt.md`.
 ## Setup
 1. Install PostgreSQL and create a database named `supply_chain`.
 2. Create a Python environment and run `pip install -r requirements.txt`.
-3. Copy `.env.example` to `.env` and fill in your own values. Never commit `.env`.
+3. Copy `.env.example` to `.env` and fill in your own values for connecting to PostgreSQL. The Python scripts do not need it. Never commit `.env`.
 4. Place the raw CSV files in `data/raw/` (not committed because of size).
 5. Run the scripts in `python/`, then the scripts in `sql/` in order (see `sql/load_raw.sql` for loading).
 6. Open `powerbi/supply_chain_dashboard.pbix` and point it at your database.
