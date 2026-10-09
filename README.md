@@ -1,5 +1,7 @@
 # AI-Powered Supply Chain Analytics & Automation
 
+**Live project page:** https://mosinali10.github.io/ai-supply-chain-analytics/
+
 An end-to-end analytics system: raw order data is profiled, cleaned and validated in Python, loaded into PostgreSQL (raw, staging, analytics), turned into reconciled KPIs in SQL, shown in a Power BI dashboard, and reported by an n8n workflow with a checked AI summary step.
 
 ## Business problem
