@@ -60,10 +60,11 @@ Details, tests and limits: `docs/ai_layer.md`. Prompt: `docs/ai_prompt.md`.
 5. Run the scripts in `python/`, then the scripts in `sql/` in order (see `sql/load_raw.sql` for loading).
 6. Open `powerbi/supply_chain_dashboard.pbix` and point it at your database.
 7. Import `n8n/KPI Report.json` into n8n and create a Postgres credential named `Postgres account` in n8n only.
-
 ## Status
 | Item | Status |
 |---|---|
 | Python, PostgreSQL, SQL KPIs, Power BI, n8n | Done |
 | AI layer | Done in mock mode; no real model tested |
-| Architecture diagram, QA checklist | Not
+| Architecture diagram (`docs/architecture.md`), QA checklist (`docs/qa_checklist.md`) | Done |
+| Live project page and dashboard PDF | Done |
+| Real AI model call, `skipped` path, database-down failure test | Not tested |
