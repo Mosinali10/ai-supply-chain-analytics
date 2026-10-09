@@ -47,6 +47,15 @@ ul{margin:0;padding-left:20px}
 <p class="note">Jan 2015 to Jan 2018. 2,855 canceled orders are excluded from eligible orders. The delay pattern by shipping mode is unusually uniform and may reflect how the dataset was built. These are dataset findings, not proven operational causes.</p>
 
 <div class="card">
+<h2>AI insight layer</h2>
+<p>The n8n workflow builds a payload from validated KPIs, exceptions and monthly delay rates. A summary is created from that payload and checked by code before it is stored. Numbers that are not in the payload and unsupported causal wording are rejected, and a rejected text is never stored, only the reason.</p>
+<p><strong>Tested:</strong> 8 checker unit tests passed. In the workflow, an invented number (58%) and an invented cause ("because") were both rejected, and the normal run was logged as mock.</p>
+<p><strong>Not tested:</strong> a real AI model call (no API key was used) and the path where the AI branch fails after the KPI report is logged.</p>
+<p class="note">The summary step is a fixed template, not an AI model. A real model can replace it, and the same checker would verify its output.</p>
+<p><a href="https://github.com/Mosinali10/ai-supply-chain-analytics/blob/main/docs/ai_layer.md">AI layer details</a> | <a href="https://github.com/Mosinali10/ai-supply-chain-analytics/blob/main/docs/ai_prompt.md">Prompt</a></p>
+</div>
+
+<div class="card">
 <h2>Dashboard</h2>
 <p><a class="btn" href="dashboard_report.pdf">Download the full dashboard as PDF</a></p>
 <p>Values on the unfiltered pages were compared with SQL and match.</p>
