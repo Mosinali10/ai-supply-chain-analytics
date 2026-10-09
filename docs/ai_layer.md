@@ -1,4 +1,6 @@
-# AI Insight Layer (Phase 9)
+# AI-Output Verification Layer (Phase 9)
+
+Status: no model is connected. The summary step is a template.
 
 ## Status
 - **The AI node is a MOCK.** `Mock AI` is a fixed template filled from payload values. It is not AI, and no AI model has generated any stored text.

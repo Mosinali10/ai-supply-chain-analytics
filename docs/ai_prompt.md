@@ -1,4 +1,6 @@
-# AI Insight Layer Prompt
+# Prompt for a Future Model (not used yet)
+
+Status: no model is connected. The summary step is a template.
 
 ## Purpose
 
